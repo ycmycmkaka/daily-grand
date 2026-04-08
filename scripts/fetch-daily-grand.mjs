@@ -3,66 +3,105 @@ import fs from "fs/promises";
 const END_YEAR = new Date().getFullYear();
 const START_YEAR = END_YEAR - 3;
 
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function htmlToPlainText(html) {
+  return decodeHtmlEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, "\n")
+      .replace(/<style[\s\S]*?<\/style>/gi, "\n")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, "\n")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|section|article|tr|table|ul|ol|li|h1|h2|h3|h4|h5|h6)>/gi, "\n")
+      .replace(/<[^>]+>/g, "\n")
+      .replace(/\r/g, "")
+  );
+}
+
 function toIsoDate(text) {
   const d = new Date(text.replace(/\s+/g, " ").trim());
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
 }
 
-function extractDrawsFromYearPage(html) {
-  const lines = html
+function extractDrawsFromText(text) {
+  const lines = text
     .split("\n")
-    .map((s) => s.replace(/\r/g, "").trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 
   const draws = [];
+  const seen = new Set();
 
   for (let i = 0; i < lines.length; i++) {
-    const weekdayLine = lines[i];
+    const weekday = lines[i];
 
-    if (weekdayLine !== "Monday" && weekdayLine !== "Thursday") {
-      continue;
+    if (weekday !== "Monday" && weekday !== "Thursday") continue;
+
+    let dateLine = "";
+    let j = i + 1;
+
+    while (j < lines.length && j <= i + 5) {
+      if (/^[A-Za-z]+ \d{1,2} \d{4}$/.test(lines[j])) {
+        dateLine = lines[j];
+        break;
+      }
+      j++;
     }
 
-    const dateLine = lines[i + 1] || "";
-    const isDateLine = /^[A-Za-z]+ \d{1,2} \d{4}$/.test(dateLine);
-    if (!isDateLine) {
-      continue;
-    }
+    if (!dateLine) continue;
 
     const date = toIsoDate(dateLine);
-    if (!date) {
+    if (!date) continue;
+
+    const nums = [];
+    let k = j + 1;
+
+    while (k < lines.length && k <= j + 30 && nums.length < 6) {
+      const line = lines[k];
+
+      if (/^\d{1,2}$/.test(line)) {
+        nums.push(Number(line));
+      } else {
+        const starMatch = line.match(/^\*\s*(\d{1,2})$/);
+        if (starMatch) nums.push(Number(starMatch[1]));
+      }
+
+      k++;
+    }
+
+    if (nums.length !== 6) continue;
+
+    const mainNumbers = nums.slice(0, 5);
+    const special = nums[5];
+
+    if (
+      !mainNumbers.every((n) => Number.isInteger(n) && n >= 1 && n <= 49) ||
+      !Number.isInteger(special) ||
+      special < 1 ||
+      special > 7
+    ) {
       continue;
     }
 
-    const nums = [];
-    let j = i + 2;
+    const key = `${date}|${mainNumbers.join("-")}|${special}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
 
-    while (j < lines.length && nums.length < 6) {
-      const m = lines[j].match(/^\*\s*(\d{1,2})$/);
-      if (m) {
-        nums.push(Number(m[1]));
-      }
-      j += 1;
-    }
-
-    if (nums.length === 6) {
-      const mainNumbers = nums.slice(0, 5);
-      const special = nums[5];
-
-      if (
-        mainNumbers.every((n) => Number.isInteger(n) && n >= 1 && n <= 49) &&
-        Number.isInteger(special) &&
-        special >= 1 &&
-        special <= 7
-      ) {
-        draws.push({
-          date,
-          numbers: mainNumbers.sort((a, b) => a - b),
-          special
-        });
-      }
-    }
+    draws.push({
+      date,
+      numbers: [...mainNumbers].sort((a, b) => a - b),
+      special
+    });
   }
 
   return draws;
@@ -82,7 +121,9 @@ async function fetchYear(year) {
   }
 
   const html = await res.text();
-  const draws = extractDrawsFromYearPage(html);
+  const text = htmlToPlainText(html);
+  const draws = extractDrawsFromText(text);
+
   console.log(`Fetched ${year}: ${draws.length} draws`);
   return draws;
 }
@@ -102,12 +143,8 @@ async function main() {
   const all = [];
 
   for (let year = START_YEAR; year <= END_YEAR; year++) {
-    try {
-      const draws = await fetchYear(year);
-      all.push(...draws);
-    } catch (err) {
-      console.error(`Error fetching ${year}: ${err.message}`);
-    }
+    const draws = await fetchYear(year);
+    all.push(...draws);
   }
 
   const finalData = dedupeDraws(all);

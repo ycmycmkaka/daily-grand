@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 
-const START_YEAR = 2016;
 const END_YEAR = new Date().getFullYear();
+const START_YEAR = END_YEAR - 3;
 
 function toIsoDate(text) {
   const d = new Date(text.replace(/\s+/g, " ").trim());
@@ -20,8 +20,8 @@ function extractDrawsFromYearPage(html) {
 
   while (i < lines.length) {
     const line = lines[i];
-
     const dateMatch = line.match(/^(Monday|Thursday)\s+([A-Za-z]+ \d{1,2} \d{4})$/);
+
     if (!dateMatch) {
       i += 1;
       continue;
@@ -29,8 +29,8 @@ function extractDrawsFromYearPage(html) {
 
     const dateText = dateMatch[2];
     const nums = [];
-
     let j = i + 1;
+
     while (j < lines.length && nums.length < 6) {
       const m = lines[j].match(/^\*\s*(\d{1,2})$/);
       if (m) nums.push(Number(m[1]));
@@ -41,7 +41,7 @@ function extractDrawsFromYearPage(html) {
       draws.push({
         date: toIsoDate(dateText),
         numbers: nums.slice(0, 5).sort((a, b) => a - b),
-        special: nums[5],
+        special: nums[5]
       });
     }
 
@@ -63,8 +63,8 @@ async function fetchYear(year) {
   const res = await fetch(url, {
     headers: {
       "user-agent": "Mozilla/5.0",
-      "accept-language": "en-CA,en;q=0.9",
-    },
+      "accept-language": "en-CA,en;q=0.9"
+    }
   });
 
   if (!res.ok) {
@@ -91,6 +91,7 @@ async function main() {
 
   for (let year = START_YEAR; year <= END_YEAR; year++) {
     try {
+      console.log(`Fetching ${year}...`);
       const draws = await fetchYear(year);
       console.log(`Fetched ${year}: ${draws.length} draws`);
       all.push(...draws);

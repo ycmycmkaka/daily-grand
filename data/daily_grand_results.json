@@ -1,8 +1,1 @@
-{
-  "name": "daily-grand-stats",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "fetch:data": "node scripts/fetch-daily-grand.mjs"
-  }
-}
+[]

@@ -16,8 +16,12 @@
       --blue: #38bdf8;
       --green: #22c55e;
       --amber: #f59e0b;
-      --pink: #f472b6;
-      --red: #f87171;
+      --red: #ef4444;
+      --graybar: #d1d5db;
+      --card-light: #f8fafc;
+      --card-light-border: #d9e2ef;
+      --card-light-title: #1677ff;
+      --card-light-text: #4b5563;
     }
 
     * { box-sizing: border-box; }
@@ -32,50 +36,24 @@
     .container {
       max-width: 1360px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 20px;
     }
 
     h1 {
-      margin: 0 0 8px;
+      margin: 0 0 18px;
       font-size: 32px;
     }
 
-    .subtitle {
-      color: var(--muted);
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-
-    .notice {
-      background: rgba(56, 189, 248, 0.10);
-      color: #c6ecff;
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      padding: 14px 16px;
-      border-radius: 14px;
-      margin-bottom: 18px;
-      line-height: 1.6;
-    }
-
     .topbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
+      display: flex;
+      justify-content: flex-end;
       margin-bottom: 20px;
-    }
-
-    .search, .btn, .small-input {
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-    }
-
-    .search, .small-input {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--line);
     }
 
     .btn {
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
       border: none;
       cursor: pointer;
       font-weight: 700;
@@ -125,7 +103,7 @@
 
     .layout-4 {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 18px;
       margin-bottom: 22px;
     }
@@ -139,42 +117,9 @@
       height: 320px;
     }
 
-    .special-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-    }
-
-    .special-item, .mini-stat {
-      background: var(--panel-2);
-      border: 1px solid #2f4057;
-      border-radius: 16px;
-      padding: 14px 10px;
-      text-align: center;
-    }
-
-    .special-no {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      color: #fde68a;
-    }
-
-    .special-count {
-      color: #cde9ff;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-
-    .special-pct {
-      color: #86efac;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
     .balls-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 10px;
     }
 
@@ -197,75 +142,50 @@
       margin-top: 4px;
     }
 
-    .mini-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
+    .analysis-card {
+      background: #f3f6fb;
+      border: 1px solid var(--card-light-border);
+      border-radius: 18px;
+      padding: 18px 18px 14px;
+      color: #111827;
     }
 
-    .mini-label {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-
-    .mini-value {
-      font-size: 20px;
+    .analysis-title {
+      margin: 0 0 16px;
+      font-size: 18px;
       font-weight: 800;
+      color: var(--card-light-title);
+      text-align: center;
+      padding-bottom: 10px;
+      border-bottom: 4px solid #d8e5f7;
     }
 
-    .controls-row {
+    .analysis-row {
       display: grid;
-      grid-template-columns: 1fr 120px auto;
+      grid-template-columns: 1fr 150px 64px;
       gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .trend-item {
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      background: var(--panel-2);
-      border: 1px solid #2f4057;
-      border-radius: 14px;
-      padding: 12px 14px;
       margin-bottom: 10px;
-      gap: 12px;
+      font-weight: 700;
+      color: var(--card-light-text);
     }
 
-    .trend-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 34px;
-      height: 34px;
-      padding: 0 10px;
+    .bar-track {
+      height: 18px;
+      background: #d9dde3;
       border-radius: 999px;
-      font-weight: 800;
-      font-size: 13px;
-      background: rgba(56, 189, 248, 0.18);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      color: #d8f2ff;
+      overflow: hidden;
+      position: relative;
     }
 
-    .pill.hit {
-      background: rgba(34, 197, 94, 0.20);
-      border-color: rgba(34, 197, 94, 0.4);
-      color: #bbf7d0;
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
     }
 
-    .pill.miss {
-      background: rgba(248, 113, 113, 0.18);
-      border-color: rgba(248, 113, 113, 0.35);
-      color: #fecaca;
-    }
+    .blue { background: #1677ff; }
+    .green { background: #1f9a3c; }
+    .red { background: #e43122; }
 
     table {
       width: 100%;
@@ -309,33 +229,21 @@
       color: #111827;
     }
 
-    .footer-note {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.65;
+    @media (max-width: 1200px) {
+      .layout-4 { grid-template-columns: 1fr 1fr; }
     }
 
-    .small-note {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.6;
-      margin-top: 8px;
-    }
-
-    @media (max-width: 1100px) {
+    @media (max-width: 1024px) {
       .metrics { grid-template-columns: repeat(2, 1fr); }
-      .layout-2, .layout-3, .layout-4 { grid-template-columns: 1fr; }
-      .special-grid, .balls-grid { grid-template-columns: repeat(4, 1fr); }
-      .mini-grid { grid-template-columns: repeat(3, 1fr); }
+      .layout-2, .layout-3 { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 680px) {
       .container { padding: 14px; }
       .metrics { grid-template-columns: 1fr; }
-      .topbar { grid-template-columns: 1fr; }
-      .controls-row { grid-template-columns: 1fr; }
-      .special-grid, .balls-grid, .mini-grid { grid-template-columns: repeat(2, 1fr); }
+      .layout-4 { grid-template-columns: 1fr; }
+      .balls-grid { grid-template-columns: repeat(3, 1fr); }
+      .analysis-row { grid-template-columns: 1fr 120px 54px; }
       h1 { font-size: 26px; }
     }
   </style>
@@ -343,15 +251,8 @@
 <body>
   <div class="container">
     <h1>Daily Grand 統計分析</h1>
-    <div class="subtitle">讀取 GitHub repo 入面嘅 JSON 歷史資料，自動分析主號碼 1–49 同特別號碼 1–7。</div>
-
-    <div class="notice">
-      此頁會讀取 <strong>data/daily_grand_results.json</strong>。<br>
-      功能包括：特別號碼百分比、連續未出期數、奇偶比例、大細分佈、尾數分析、指定號碼最近 N 期走勢。
-    </div>
 
     <div class="topbar">
-      <input id="searchInput" class="search" placeholder="搜尋號碼，例如：7 或 7,12" />
       <button id="reloadBtn" class="btn">重新載入資料</button>
     </div>
 
@@ -376,63 +277,45 @@
 
     <div class="layout-2">
       <div class="card">
-        <h2 class="section-title">主號碼出現次數（1–49）</h2>
+        <h2 class="section-title">主號碼出現次數（1-49）</h2>
         <div class="chart-box"><canvas id="mainChart"></canvas></div>
       </div>
       <div class="card">
-        <h2 class="section-title">特別號碼百分比分佈（1–7）</h2>
-        <div class="special-grid" id="specialPercentGrid"></div>
-        <div class="footer-note">公式：某特別號碼出現次數 ÷ 總期數 × 100%</div>
+        <h2 class="section-title">特別號碼出現次數（1-7）</h2>
+        <div class="chart-box"><canvas id="specialChart"></canvas></div>
       </div>
     </div>
 
     <div class="layout-3">
       <div class="card">
-        <h2 class="section-title">特別號碼出現次數（1–7）</h2>
-        <div class="chart-box"><canvas id="specialChart"></canvas></div>
+        <h2 class="section-title">最熱主號碼 Top 5</h2>
+        <div class="balls-grid" id="hotMainNumbers"></div>
       </div>
       <div class="card">
-        <h2 class="section-title">主號碼熱門 / 冷門</h2>
-        <div style="margin-bottom:14px; font-weight:700;">最熱 Top 14</div>
-        <div class="balls-grid" id="hotMainNumbers"></div>
-        <div style="height:18px"></div>
-        <div style="margin-bottom:14px; font-weight:700;">最冷 Top 14</div>
+        <h2 class="section-title">最冷主號碼 Top 5</h2>
         <div class="balls-grid" id="coldMainNumbers"></div>
       </div>
     </div>
 
     <div class="layout-4">
-      <div class="card">
-        <h2 class="section-title">連續未出期數（1–49）</h2>
-        <div class="balls-grid" id="skipGrid"></div>
-        <div class="small-note">數值愈大，代表該號碼已經愈多期冇出現。</div>
+      <div class="analysis-card">
+        <h2 class="analysis-title">單雙分布 (Top 4)</h2>
+        <div id="oddEvenDist"></div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">奇偶比例 / 大細分佈</h2>
-        <div class="mini-grid" id="ratioGrid"></div>
-        <div class="small-note">
-          奇偶比例只計主號碼 5 粒。<br>
-          大細分佈預設：1–24 = 小，25–49 = 大。
-        </div>
-      </div>
-    </div>
-
-    <div class="layout-4">
-      <div class="card">
-        <h2 class="section-title">尾數分析（主號碼）</h2>
-        <div class="chart-box"><canvas id="tailChart"></canvas></div>
+      <div class="analysis-card">
+        <h2 class="analysis-title">連續號碼數量</h2>
+        <div id="consecutiveDist"></div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">指定號碼最近 N 期走勢</h2>
-        <div class="controls-row">
-          <input id="trendNumberInput" class="small-input" type="number" min="1" max="49" value="7" placeholder="號碼" />
-          <input id="trendLimitInput" class="small-input" type="number" min="5" max="100" value="20" placeholder="期數" />
-          <button id="trendBtn" class="btn">更新走勢</button>
-        </div>
-        <div id="trendSummary" class="small-note" style="margin-bottom: 12px;"></div>
-        <div id="trendList"></div>
+      <div class="analysis-card">
+        <h2 class="analysis-title">上期重複</h2>
+        <div id="repeatDist"></div>
+      </div>
+
+      <div class="analysis-card">
+        <h2 class="analysis-title">涵蓋分區</h2>
+        <div id="zoneDist"></div>
       </div>
     </div>
 
@@ -449,9 +332,6 @@
           <tbody id="resultsTableBody"></tbody>
         </table>
       </div>
-      <div class="footer-note">
-        搜尋框可篩選指定號碼。輸入單一號碼例如 <strong>7</strong>，或者輸入組合例如 <strong>7,12</strong>。
-      </div>
     </div>
   </div>
 
@@ -459,7 +339,6 @@
     let allRows = [];
     let mainChartInstance = null;
     let specialChartInstance = null;
-    let tailChartInstance = null;
 
     function formatDate(dateStr) {
       const d = new Date(dateStr);
@@ -485,28 +364,8 @@
       return freq;
     }
 
-    function countTailFrequencies(rows) {
-      const freq = {};
-      for (let i = 0; i <= 9; i++) freq[i] = 0;
-      rows.forEach(r => {
-        r.numbers.forEach(n => {
-          const tail = n % 10;
-          freq[tail] += 1;
-        });
-      });
-      return freq;
-    }
-
     function getTopEntry(freq) {
       return Object.entries(freq).sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))[0];
-    }
-
-    function applySearch(rows) {
-      const raw = document.getElementById("searchInput").value.trim();
-      if (!raw) return rows;
-      const targets = raw.split(",").map(v => Number(v.trim())).filter(v => !Number.isNaN(v));
-      if (!targets.length) return rows;
-      return rows.filter(r => targets.every(t => r.numbers.includes(t) || r.special === t));
     }
 
     function renderMetrics(rows, mainFreq, specialFreq) {
@@ -556,33 +415,16 @@
       });
     }
 
-    function renderSpecialPercentages(specialFreq, totalDraws) {
-      const el = document.getElementById("specialPercentGrid");
-      const html = [];
-      for (let i = 1; i <= 7; i++) {
-        const count = specialFreq[i] || 0;
-        const pct = totalDraws ? ((count / totalDraws) * 100).toFixed(2) : "0.00";
-        html.push(`
-          <div class="special-item">
-            <div class="special-no">${i}</div>
-            <div class="special-count">${count} 次</div>
-            <div class="special-pct">${pct}%</div>
-          </div>
-        `);
-      }
-      el.innerHTML = html.join("");
-    }
-
     function renderHotCold(mainFreq) {
       const entries = Object.entries(mainFreq).map(([num, count]) => ({ num: Number(num), count }));
 
       const hot = [...entries]
         .sort((a, b) => b.count - a.count || a.num - b.num)
-        .slice(0, 14);
+        .slice(0, 5);
 
       const cold = [...entries]
         .sort((a, b) => a.count - b.count || a.num - b.num)
-        .slice(0, 14);
+        .slice(0, 5);
 
       document.getElementById("hotMainNumbers").innerHTML = hot.map(item => `
         <div class="ball-stat">
@@ -599,151 +441,122 @@
       `).join("");
     }
 
-    function calculateSkipCounts(rows) {
-      const result = [];
-      for (let num = 1; num <= 49; num++) {
-        let skip = 0;
-        let found = false;
-
-        for (let i = 0; i < rows.length; i++) {
-          if (rows[i].numbers.includes(num)) {
-            found = true;
-            break;
-          }
-          skip += 1;
-        }
-
-        result.push({
-          num,
-          skip: found ? skip : rows.length
-        });
-      }
-
-      return result.sort((a, b) => b.skip - a.skip || a.num - b.num);
+    function getOddEvenPattern(numbers) {
+      const odd = numbers.filter(n => n % 2 !== 0).length;
+      const even = 5 - odd;
+      return `${odd}單 ${even}雙`;
     }
 
-    function renderSkipGrid(rows) {
-      const data = calculateSkipCounts(rows).slice(0, 14);
-      document.getElementById("skipGrid").innerHTML = data.map(item => `
-        <div class="ball-stat">
-          <div class="ball-number">${item.num}</div>
-          <div class="ball-count">${item.skip} 期未出</div>
+    function getConsecutiveCount(numbers) {
+      const sorted = [...numbers].sort((a, b) => a - b);
+      let count = 0;
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === sorted[i - 1] + 1) count += 1;
+      }
+      return count;
+    }
+
+    function getRepeatCount(current, previous) {
+      if (!previous) return null;
+      const prevSet = new Set(previous.numbers);
+      return current.numbers.filter(n => prevSet.has(n)).length;
+    }
+
+    function getZoneCount(numbers) {
+      const zones = new Set();
+      numbers.forEach(n => {
+        if (n >= 1 && n <= 10) zones.add(1);
+        else if (n <= 20) zones.add(2);
+        else if (n <= 30) zones.add(3);
+        else if (n <= 40) zones.add(4);
+        else zones.add(5);
+      });
+      return zones.size;
+    }
+
+    function countDistribution(items) {
+      const map = {};
+      items.forEach(v => {
+        map[v] = (map[v] || 0) + 1;
+      });
+      return map;
+    }
+
+    function percent(count, total) {
+      return total ? Math.round((count / total) * 100) : 0;
+    }
+
+    function renderProgressRows(containerId, items, colorClass = "blue") {
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map(item => `
+        <div class="analysis-row">
+          <div>${item.label}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${item.color || colorClass}" style="width:${item.pct}%"></div>
+          </div>
+          <div>${item.pct}%</div>
         </div>
       `).join("");
     }
 
-    function calculateOddEvenAndSize(rows) {
-      let odd = 0;
-      let even = 0;
-      let small = 0;
-      let big = 0;
+    function renderAdvancedAnalysis(rows) {
+      const total = rows.length;
 
-      rows.forEach(r => {
-        r.numbers.forEach(n => {
-          if (n % 2 === 0) even += 1;
-          else odd += 1;
+      const oddEvenMap = countDistribution(rows.map(r => getOddEvenPattern(r.numbers)));
+      const oddEvenItems = ["4單 1雙", "3單 2雙", "2單 3雙", "1單 4雙", "5單 0雙", "0單 5雙"]
+        .filter(label => oddEvenMap[label])
+        .sort((a, b) => oddEvenMap[b] - oddEvenMap[a])
+        .slice(0, 4)
+        .map(label => ({
+          label,
+          pct: percent(oddEvenMap[label], total),
+          color: "blue"
+        }));
+      renderProgressRows("oddEvenDist", oddEvenItems, "blue");
 
-          if (n <= 24) small += 1;
-          else big += 1;
-        });
-      });
+      const consecutiveMap = countDistribution(rows.map(r => getConsecutiveCount(r.numbers)));
+      const consecutiveItems = [1, 0, 2, 3, 4]
+        .map(n => ({
+          label: `${n}個連續`,
+          pct: percent(consecutiveMap[n] || 0, total),
+          color: n === 1 || n === 2 ? "green" : (n === 0 ? "red" : "green")
+        }));
+      renderProgressRows("consecutiveDist", consecutiveItems);
 
-      const totalMain = odd + even;
-
-      return {
-        odd,
-        even,
-        small,
-        big,
-        oddPct: totalMain ? ((odd / totalMain) * 100).toFixed(2) : "0.00",
-        evenPct: totalMain ? ((even / totalMain) * 100).toFixed(2) : "0.00",
-        smallPct: totalMain ? ((small / totalMain) * 100).toFixed(2) : "0.00",
-        bigPct: totalMain ? ((big / totalMain) * 100).toFixed(2) : "0.00"
-      };
-    }
-
-    function renderRatioGrid(rows) {
-      const stats = calculateOddEvenAndSize(rows);
-      document.getElementById("ratioGrid").innerHTML = `
-        <div class="mini-stat">
-          <div class="mini-label">奇數</div>
-          <div class="mini-value">${stats.odd}</div>
-          <div class="small-note">${stats.oddPct}%</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">偶數</div>
-          <div class="mini-value">${stats.even}</div>
-          <div class="small-note">${stats.evenPct}%</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">小（1–24）</div>
-          <div class="mini-value">${stats.small}</div>
-          <div class="small-note">${stats.smallPct}%</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">大（25–49）</div>
-          <div class="mini-value">${stats.big}</div>
-          <div class="small-note">${stats.bigPct}%</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">主號碼總數</div>
-          <div class="mini-value">${stats.odd + stats.even}</div>
-          <div class="small-note">5 x ${rows.length} 期</div>
-        </div>
-      `;
-    }
-
-    function renderTailChart(rows) {
-      const tailFreq = countTailFrequencies(rows);
-      tailChartInstance = renderChart(
-        "tailChart",
-        tailChartInstance,
-        Object.keys(tailFreq),
-        Object.values(tailFreq),
-        "尾數次數",
-        "rgba(244, 114, 182, 0.75)",
-        "rgba(244, 114, 182, 1)"
-      );
-    }
-
-    function renderTrend() {
-      if (!allRows.length) return;
-
-      const num = Number(document.getElementById("trendNumberInput").value);
-      const limit = Number(document.getElementById("trendLimitInput").value);
-
-      if (!Number.isInteger(num) || num < 1 || num > 49) {
-        document.getElementById("trendSummary").textContent = "請輸入 1 至 49 之間的主號碼。";
-        document.getElementById("trendList").innerHTML = "";
-        return;
+      const repeatValues = [];
+      for (let i = 0; i < rows.length; i++) {
+        const repeat = getRepeatCount(rows[i], rows[i + 1]);
+        if (repeat !== null) repeatValues.push(repeat);
       }
+      const repeatMap = countDistribution(repeatValues);
+      const repeatTotal = repeatValues.length;
+      const repeatItems = [
+        { label: "1個", key: 1 },
+        { label: "0個", key: 0 },
+        { label: "2個", key: 2 },
+        { label: "3個或以上", key: "3plus" }
+      ].map(item => {
+        const count = item.key === "3plus"
+          ? (repeatMap[3] || 0) + (repeatMap[4] || 0) + (repeatMap[5] || 0)
+          : (repeatMap[item.key] || 0);
 
-      const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
-      const latestRows = allRows.slice(0, safeLimit);
+        return {
+          label: item.label,
+          pct: percent(count, repeatTotal),
+          color: "blue"
+        };
+      });
+      renderProgressRows("repeatDist", repeatItems, "blue");
 
-      let hitCount = 0;
-      const html = latestRows.map(r => {
-        const hit = r.numbers.includes(num);
-        if (hit) hitCount += 1;
-
-        return `
-          <div class="trend-item">
-            <div class="trend-left">
-              <span class="pill">${formatDate(r.date)}</span>
-              ${r.numbers.map(n => `<span class="pill ${n === num ? "hit" : ""}">${n}</span>`).join("")}
-              <span class="pill">S ${r.special}</span>
-            </div>
-            <div>
-              <span class="pill ${hit ? "hit" : "miss"}">${hit ? "有開出" : "冇開出"}</span>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      document.getElementById("trendSummary").textContent =
-        `號碼 ${num} 最近 ${safeLimit} 期出現 ${hitCount} 次。`;
-
-      document.getElementById("trendList").innerHTML = html;
+      const zoneMap = countDistribution(rows.map(r => getZoneCount(r.numbers)));
+      const zoneItems = [4, 5, 3, 2, 1]
+        .filter(z => zoneMap[z])
+        .map(z => ({
+          label: `${z}個區`,
+          pct: percent(zoneMap[z], total),
+          color: "blue"
+        }));
+      renderProgressRows("zoneDist", zoneItems, "blue");
     }
 
     function renderTable(rows) {
@@ -761,17 +574,13 @@
     }
 
     function renderDashboard(rows) {
-      const filteredRows = applySearch(rows);
-      const mainFreq = countMainFrequencies(filteredRows);
-      const specialFreq = countSpecialFrequencies(filteredRows);
+      const mainFreq = countMainFrequencies(rows);
+      const specialFreq = countSpecialFrequencies(rows);
 
-      renderMetrics(filteredRows, mainFreq, specialFreq);
-      renderSpecialPercentages(specialFreq, filteredRows.length);
+      renderMetrics(rows, mainFreq, specialFreq);
       renderHotCold(mainFreq);
-      renderSkipGrid(filteredRows);
-      renderRatioGrid(filteredRows);
-      renderTailChart(filteredRows);
-      renderTable(filteredRows);
+      renderAdvancedAnalysis(rows);
+      renderTable(rows);
 
       mainChartInstance = renderChart(
         "mainChart",
@@ -792,8 +601,6 @@
         "rgba(245, 158, 11, 0.75)",
         "rgba(245, 158, 11, 1)"
       );
-
-      renderTrend();
     }
 
     async function loadData() {
@@ -825,18 +632,7 @@
       }
     }
 
-    document.getElementById("searchInput").addEventListener("input", () => {
-      if (allRows.length) renderDashboard(allRows);
-    });
-
     document.getElementById("reloadBtn").addEventListener("click", loadData);
-    document.getElementById("trendBtn").addEventListener("click", renderTrend);
-    document.getElementById("trendNumberInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") renderTrend();
-    });
-    document.getElementById("trendLimitInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") renderTrend();
-    });
 
     loadData();
   </script>

@@ -567,13 +567,13 @@
         }));
       renderProgressRows("oddEvenDist", oddEvenItems, "blue");
 
-      const consecutiveMap = countDistribution(rows.map(r => getConsecutiveCount(r.numbers)));
-      const consecutiveItems = [1, 0, 2, 3, 4].map(n => ({
-        label: `${n}個連續`,
-        pct: percent(consecutiveMap[n] || 0, total),
-        color: n === 0 ? "red" : "green"
-      }));
-      renderProgressRows("consecutiveDist", consecutiveItems);
+const consecutiveMap = countDistribution(rows.map(r => getConsecutiveCount(r.numbers)));
+const consecutiveItems = [0, 1, 2, 3, 4].map(n => ({
+  label: `${n}個連續`,
+  pct: percent(consecutiveMap[n] || 0, total),
+  color: n === 0 ? "red" : "green"
+}));
+renderProgressRows("consecutiveDist", consecutiveItems);
 
       const repeatValues = [];
       for (let i = 0; i < rows.length; i++) {
@@ -583,8 +583,8 @@
       const repeatMap = countDistribution(repeatValues);
       const repeatTotal = repeatValues.length;
       const repeatItems = [
-        { label: "1個", key: 1 },
         { label: "0個", key: 0 },
+        { label: "1個", key: 1 },
         { label: "2個", key: 2 },
         { label: "3個或以上", key: "3plus" }
       ].map(item => {
@@ -600,7 +600,7 @@
       renderProgressRows("repeatDist", repeatItems, "blue");
 
       const zoneMap = countDistribution(rows.map(r => getZoneCount(r.numbers)));
-      const zoneItems = [4, 5, 3, 2, 1]
+      const zoneItems = [5, 4, 3, 2, 1]
         .filter(z => zoneMap[z] !== undefined)
         .map(z => ({
           label: `${z}個區`,

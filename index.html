@@ -501,6 +501,50 @@
       `).join("");
     }
 
+    function calculateMissingStreak(rows) {
+      const result = [];
+
+      for (let num = 1; num <= 49; num++) {
+        let missing = 0;
+        let found = false;
+
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].numbers.includes(num)) {
+            found = true;
+            break;
+          }
+          missing += 1;
+        }
+
+        result.push({
+          num,
+          missing: found ? missing : rows.length
+        });
+      }
+
+      return result;
+    }
+
+    function renderMissingLong(rows) {
+      const data = calculateMissingStreak(rows)
+        .filter(item => item.missing >= 15)
+        .sort((a, b) => b.missing - a.missing || a.num - b.num);
+
+      const el = document.getElementById("missingLongGrid");
+
+      if (!data.length) {
+        el.innerHTML = `<div style="color:#5f7087;font-weight:700;">目前冇主號碼連續 15 期或以上未開。</div>`;
+        return;
+      }
+
+      el.innerHTML = data.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">已連續 ${item.missing} 期未開</div>
+        </div>
+      `).join("");
+    }
+
     function getOddEvenPattern(numbers) {
       const odd = numbers.filter(n => n % 2 !== 0).length;
       const even = 5 - odd;
@@ -572,13 +616,13 @@
         }));
       renderProgressRows("oddEvenDist", oddEvenItems, "blue");
 
-const consecutiveMap = countDistribution(rows.map(r => getConsecutiveCount(r.numbers)));
-const consecutiveItems = [0, 1, 2, 3, 4].map(n => ({
-  label: `${n}個連續`,
-  pct: percent(consecutiveMap[n] || 0, total),
-  color: n === 0 ? "red" : "green"
-}));
-renderProgressRows("consecutiveDist", consecutiveItems);
+      const consecutiveMap = countDistribution(rows.map(r => getConsecutiveCount(r.numbers)));
+      const consecutiveItems = [0, 1, 2, 3, 4].map(n => ({
+        label: `${n}個連續`,
+        pct: percent(consecutiveMap[n] || 0, total),
+        color: n === 0 ? "red" : "green"
+      }));
+      renderProgressRows("consecutiveDist", consecutiveItems);
 
       const repeatValues = [];
       for (let i = 0; i < rows.length; i++) {
@@ -637,6 +681,7 @@ renderProgressRows("consecutiveDist", consecutiveItems);
 
       renderMetrics(rows, mainFreq, specialFreq);
       renderHotCold(mainFreq);
+      renderMissingLong(rows);
       renderAdvancedAnalysis(rows);
       renderTable(rows);
 

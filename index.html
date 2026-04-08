@@ -1,487 +1,169 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daily Grand 統計分析</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #07111f;
-      --panel: #0f172a;
-      --panel-2: #111827;
-      --line: #243244;
-      --text: #e5eefb;
-      --muted: #93a4bd;
-      --blue: #38bdf8;
-      --green: #22c55e;
-      --amber: #f59e0b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-      background: linear-gradient(180deg, #020617, #0b1324 45%, #07111f);
-      color: var(--text);
-    }
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 32px;
-    }
-    .subtitle {
-      color: var(--muted);
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-    .notice {
-      background: rgba(56, 189, 248, 0.10);
-      color: #c6ecff;
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      padding: 14px 16px;
-      border-radius: 14px;
-      margin-bottom: 18px;
-      line-height: 1.6;
-    }
-    .topbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .search, .btn {
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-    }
-    .search {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-    .btn {
-      border: none;
-      cursor: pointer;
-      font-weight: 700;
-      color: white;
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);
-    }
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-    .card {
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.20);
-    }
-    .metric-label {
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .metric-value {
-      margin-top: 8px;
-      font-size: 30px;
-      font-weight: 800;
-    }
-    .layout-2 {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 18px;
-      margin-bottom: 22px;
-    }
-    .layout-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-bottom: 22px;
-    }
-    .section-title {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-    .chart-box {
-      height: 320px;
-    }
-    .special-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-    }
-    .special-item {
-      background: var(--panel-2);
-      border: 1px solid #2f4057;
-      border-radius: 16px;
-      padding: 14px 10px;
-      text-align: center;
-    }
-    .special-no {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      color: #fde68a;
-    }
-    .special-count {
-      color: #cde9ff;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-    .special-pct {
-      color: #86efac;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .balls-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-    }
-    .ball-stat {
-      background: var(--panel-2);
-      border: 1px solid #2f4057;
-      border-radius: 14px;
-      padding: 12px;
-      text-align: center;
-    }
-    .ball-number { font-size: 18px; font-weight: 800; }
-    .ball-count { color: #93c5fd; font-size: 13px; margin-top: 4px; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 12px 10px;
-      text-align: left;
-      border-bottom: 1px solid var(--line);
-      font-size: 14px;
-      vertical-align: top;
-    }
-    th { color: var(--muted); font-weight: 600; }
-    .num-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .num-badge {
-      min-width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(56, 189, 248, 0.9);
-      color: #fff;
-      font-weight: 700;
-      font-size: 13px;
-    }
-    .num-badge.special {
-      background: rgba(245, 158, 11, 0.95);
-      color: #111827;
-    }
-    .footer-note {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.65;
-    }
-    @media (max-width: 1024px) {
-      .metrics { grid-template-columns: repeat(2, 1fr); }
-      .layout-2, .layout-3 { grid-template-columns: 1fr; }
-      .special-grid, .balls-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 680px) {
-      .container { padding: 14px; }
-      .metrics { grid-template-columns: 1fr; }
-      .topbar { grid-template-columns: 1fr; }
-      .special-grid, .balls-grid { grid-template-columns: repeat(2, 1fr); }
-      h1 { font-size: 26px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Daily Grand 統計分析</h1>
-    <div class="subtitle">GitHub Pages 版本。由 GitHub Actions 自動抓取歷史開獎，再生成本地 JSON 做統計。</div>
+import fs from "fs/promises";
 
-    <div class="notice">
-      你個 repo 入面要有一個 <strong>data/daily_grand_results.json</strong>。
-      呢個頁面會自動讀取 JSON，再分開統計：<strong>主號碼 1–49</strong> 同 <strong>特別號碼 1–7</strong>。
-    </div>
+const END_YEAR = new Date().getFullYear();
+const START_YEAR = END_YEAR - 3;
 
-    <div class="topbar">
-      <input id="searchInput" class="search" placeholder="搜尋號碼，例如：7 或 7,12" />
-      <button id="reloadBtn" class="btn">重新載入資料</button>
-    </div>
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
 
-    <div class="metrics">
-      <div class="card">
-        <div class="metric-label">總期數</div>
-        <div class="metric-value" id="totalDraws">-</div>
-      </div>
-      <div class="card">
-        <div class="metric-label">最近一期日期</div>
-        <div class="metric-value" id="latestDate">-</div>
-      </div>
-      <div class="card">
-        <div class="metric-label">最常見主號碼</div>
-        <div class="metric-value" id="topMain">-</div>
-      </div>
-      <div class="card">
-        <div class="metric-label">最常見特別號碼</div>
-        <div class="metric-value" id="topSpecial">-</div>
-      </div>
-    </div>
+function htmlToPlainText(html) {
+  return decodeHtmlEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, "\n")
+      .replace(/<style[\s\S]*?<\/style>/gi, "\n")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, "\n")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|section|article|tr|table|ul|ol|li|h1|h2|h3|h4|h5|h6)>/gi, "\n")
+      .replace(/<[^>]+>/g, "\n")
+      .replace(/\r/g, "")
+  );
+}
 
-    <div class="layout-2">
-      <div class="card">
-        <h2 class="section-title">主號碼出現次數（1–49）</h2>
-        <div class="chart-box"><canvas id="mainChart"></canvas></div>
-      </div>
-      <div class="card">
-        <h2 class="section-title">特別號碼百分比分佈（1–7）</h2>
-        <div class="special-grid" id="specialPercentGrid"></div>
-        <div class="footer-note">公式：某特別號碼出現次數 ÷ 總期數 × 100%</div>
-      </div>
-    </div>
+function toIsoDate(text) {
+  const d = new Date(text.replace(/\s+/g, " ").trim());
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
 
-    <div class="layout-3">
-      <div class="card">
-        <h2 class="section-title">特別號碼出現次數（1–7）</h2>
-        <div class="chart-box"><canvas id="specialChart"></canvas></div>
-      </div>
-      <div class="card">
-        <h2 class="section-title">主號碼熱門 / 冷門</h2>
-        <div style="margin-bottom:14px; font-weight:700;">最熱 Top 14</div>
-        <div class="balls-grid" id="hotMainNumbers"></div>
-        <div style="height:18px"></div>
-        <div style="margin-bottom:14px; font-weight:700;">最冷 Top 14</div>
-        <div class="balls-grid" id="coldMainNumbers"></div>
-      </div>
-    </div>
+function extractDrawsFromText(text) {
+  const lines = text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-    <div class="card">
-      <h2 class="section-title">最近開獎記錄</h2>
-      <div style="overflow:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>日期</th>
-              <th>號碼</th>
-            </tr>
-          </thead>
-          <tbody id="resultsTableBody"></tbody>
-        </table>
-      </div>
-      <div class="footer-note">
-        你之後仲可以再加：連續未出期數、奇偶比例、大細分佈、尾數分析、指定號碼最近 N 期走勢。
-      </div>
-    </div>
-  </div>
+  const draws = [];
+  const seen = new Set();
 
-  <script>
-    let allRows = [];
-    let mainChartInstance = null;
-    let specialChartInstance = null;
+  for (let i = 0; i < lines.length; i++) {
+    const weekday = lines[i];
 
-    function formatDate(dateStr) {
-      const d = new Date(dateStr);
-      if (Number.isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-CA');
-    }
+    if (weekday !== "Monday" && weekday !== "Thursday") continue;
 
-    function countMainFrequencies(rows) {
-      const freq = {};
-      for (let i = 1; i <= 49; i++) freq[i] = 0;
-      rows.forEach(r => r.numbers.forEach(n => {
-        if (freq[n] !== undefined) freq[n] += 1;
-      }));
-      return freq;
-    }
+    let dateLine = "";
+    let j = i + 1;
 
-    function countSpecialFrequencies(rows) {
-      const freq = {};
-      for (let i = 1; i <= 7; i++) freq[i] = 0;
-      rows.forEach(r => {
-        if (freq[r.special] !== undefined) freq[r.special] += 1;
-      });
-      return freq;
-    }
-
-    function getTopEntry(freq) {
-      return Object.entries(freq).sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))[0];
-    }
-
-    function applySearch(rows) {
-      const raw = document.getElementById('searchInput').value.trim();
-      if (!raw) return rows;
-      const targets = raw.split(',').map(v => Number(v.trim())).filter(v => !Number.isNaN(v));
-      if (!targets.length) return rows;
-      return rows.filter(r => targets.every(t => r.numbers.includes(t) || r.special === t));
-    }
-
-    function renderMetrics(rows, mainFreq, specialFreq) {
-      document.getElementById('totalDraws').textContent = rows.length;
-      document.getElementById('latestDate').textContent = rows[0] ? formatDate(rows[0].date) : '-';
-
-      const topMain = getTopEntry(mainFreq);
-      const topSpecial = getTopEntry(specialFreq);
-      document.getElementById('topMain').textContent = topMain ? `${topMain[0]} (${topMain[1]}次)` : '-';
-      document.getElementById('topSpecial').textContent = topSpecial ? `${topSpecial[0]} (${topSpecial[1]}次)` : '-';
-    }
-
-    function renderChart(canvasId, currentInstance, labels, data, label, colorA, colorB) {
-      if (currentInstance) currentInstance.destroy();
-      return new Chart(document.getElementById(canvasId), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label,
-            data,
-            backgroundColor: colorA,
-            borderColor: colorB,
-            borderWidth: 1,
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { labels: { color: '#dbeafe' } }
-          },
-          scales: {
-            x: {
-              ticks: { color: '#cbd5e1' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: { color: '#cbd5e1' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            }
-          }
-        }
-      });
-    }
-
-    function renderSpecialPercentages(specialFreq, totalDraws) {
-      const el = document.getElementById('specialPercentGrid');
-      const html = [];
-      for (let i = 1; i <= 7; i++) {
-        const count = specialFreq[i] || 0;
-        const pct = totalDraws ? ((count / totalDraws) * 100).toFixed(2) : '0.00';
-        html.push(`
-          <div class="special-item">
-            <div class="special-no">${i}</div>
-            <div class="special-count">${count} 次</div>
-            <div class="special-pct">${pct}%</div>
-          </div>
-        `);
+    while (j < lines.length && j <= i + 5) {
+      if (/^[A-Za-z]+ \d{1,2} \d{4}$/.test(lines[j])) {
+        dateLine = lines[j];
+        break;
       }
-      el.innerHTML = html.join('');
+      j++;
     }
 
-    function renderHotCold(mainFreq) {
-      const entries = Object.entries(mainFreq).map(([num, count]) => ({ num: Number(num), count }));
-      const hot = [...entries].sort((a, b) => b.count - a.count || a.num - b.num).slice(0, 14);
-      const cold = [...entries].sort((a, b) => a.count - b.count || a.num - b.num).slice(0, 14);
+    if (!dateLine) continue;
 
-      document.getElementById('hotMainNumbers').innerHTML = hot.map(item => `
-        <div class="ball-stat">
-          <div class="ball-number">${item.num}</div>
-          <div class="ball-count">${item.count} 次</div>
-        </div>
-      `).join('');
+    const date = toIsoDate(dateLine);
+    if (!date) continue;
 
-      document.getElementById('coldMainNumbers').innerHTML = cold.map(item => `
-        <div class="ball-stat">
-          <div class="ball-number">${item.num}</div>
-          <div class="ball-count">${item.count} 次</div>
-        </div>
-      `).join('');
-    }
+    const nums = [];
+    let k = j + 1;
 
-    function renderTable(rows) {
-      document.getElementById('resultsTableBody').innerHTML = rows.slice(0, 40).map(r => `
-        <tr>
-          <td>${formatDate(r.date)}</td>
-          <td>
-            <div class="num-row">
-              ${r.numbers.map(n => `<span class="num-badge">${n}</span>`).join('')}
-              <span class="num-badge special">S ${r.special}</span>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    }
+    while (k < lines.length && k <= j + 30 && nums.length < 6) {
+      const line = lines[k];
 
-    function renderDashboard(rows) {
-      const filteredRows = applySearch(rows);
-      const mainFreq = countMainFrequencies(filteredRows);
-      const specialFreq = countSpecialFrequencies(filteredRows);
-
-      renderMetrics(filteredRows, mainFreq, specialFreq);
-      renderSpecialPercentages(specialFreq, filteredRows.length);
-      renderHotCold(mainFreq);
-      renderTable(filteredRows);
-
-      mainChartInstance = renderChart(
-        'mainChart',
-        mainChartInstance,
-        Object.keys(mainFreq),
-        Object.values(mainFreq),
-        '主號碼次數',
-        'rgba(56, 189, 248, 0.70)',
-        'rgba(56, 189, 248, 1)'
-      );
-
-      specialChartInstance = renderChart(
-        'specialChart',
-        specialChartInstance,
-        Object.keys(specialFreq),
-        Object.values(specialFreq),
-        '特別號碼次數',
-        'rgba(245, 158, 11, 0.75)',
-        'rgba(245, 158, 11, 1)'
-      );
-    }
-
-    async function loadData() {
-      try {
-        const res = await fetch('./data/daily_grand_results.json?ts=' + Date.now());
-        if (!res.ok) throw new Error('Cannot load JSON');
-        const rows = await res.json();
-        allRows = rows
-          .filter(r => r && r.date && Array.isArray(r.numbers) && r.numbers.length === 5 && Number.isInteger(r.special))
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        if (!allRows.length) {
-          alert('搵唔到有效資料，請檢查 data/daily_grand_results.json');
-          return;
-        }
-        renderDashboard(allRows);
-      } catch (err) {
-        console.error(err);
-        alert('載入資料失敗。請確認 repo 已經有 data/daily_grand_results.json');
+      if (/^\d{1,2}$/.test(line)) {
+        nums.push(Number(line));
+      } else {
+        const starMatch = line.match(/^\*\s*(\d{1,2})$/);
+        if (starMatch) nums.push(Number(starMatch[1]));
       }
+
+      k++;
     }
 
-    document.getElementById('searchInput').addEventListener('input', () => {
-      if (allRows.length) renderDashboard(allRows);
+    if (nums.length !== 6) continue;
+
+    const mainNumbers = nums.slice(0, 5);
+    const special = nums[5];
+
+    if (
+      !mainNumbers.every((n) => Number.isInteger(n) && n >= 1 && n <= 49) ||
+      !Number.isInteger(special) ||
+      special < 1 ||
+      special > 7
+    ) {
+      continue;
+    }
+
+    const key = `${date}|${mainNumbers.join("-")}|${special}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    draws.push({
+      date,
+      numbers: [...mainNumbers].sort((a, b) => a - b),
+      special
     });
+  }
 
-    document.getElementById('reloadBtn').addEventListener('click', loadData);
+  return draws;
+}
 
-    loadData();
-  </script>
-</body>
-</html>
+async function fetchYear(year) {
+  const url = `https://ca.lottonumbers.com/daily-grand/numbers/${year}`;
+  const res = await fetch(url, {
+    headers: {
+      "user-agent": "Mozilla/5.0",
+      "accept-language": "en-CA,en;q=0.9"
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${year}: ${res.status}`);
+  }
+
+  const html = await res.text();
+  const text = htmlToPlainText(html);
+  const draws = extractDrawsFromText(text);
+
+  console.log(`Fetched ${year}: ${draws.length} draws`);
+  return draws;
+}
+
+function dedupeDraws(draws) {
+  const map = new Map();
+
+  for (const draw of draws) {
+    const key = `${draw.date}|${draw.numbers.join("-")}|${draw.special}`;
+    map.set(key, draw);
+  }
+
+  return [...map.values()].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+async function main() {
+  const all = [];
+
+  for (let year = START_YEAR; year <= END_YEAR; year++) {
+    const draws = await fetchYear(year);
+    all.push(...draws);
+  }
+
+  const finalData = dedupeDraws(all);
+
+  await fs.mkdir("data", { recursive: true });
+  await fs.writeFile(
+    "data/daily_grand_results.json",
+    JSON.stringify(finalData, null, 2),
+    "utf8"
+  );
+
+  console.log(`Saved ${finalData.length} draws to data/daily_grand_results.json`);
+
+  if (finalData.length === 0) {
+    throw new Error("No draws were parsed. Check page structure.");
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

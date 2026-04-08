@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Grand 統計分析</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --card-2: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --accent-2: #38bdf8;
+      --danger: #f43f5e;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    .subtitle { color: var(--muted); margin-bottom: 24px; }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .search, .file-input, .btn, select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    .btn {
+      cursor: pointer;
+      background: linear-gradient(135deg, #16a34a, #0ea5e9);
+      border: none;
+      font-weight: 600;
+    }
+
+    .hint {
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 22px;
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .metric-label { color: var(--muted); font-size: 13px; }
+    .metric-value { font-size: 30px; font-weight: 700; margin-top: 8px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .chart-wrap { height: 320px; }
+    .section-title {
+      font-size: 18px;
+      margin: 0 0 14px;
+    }
+
+    .balls-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+
+    .ball-stat {
+      background: var(--card-2);
+      border-radius: 14px;
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #374151;
+    }
+
+    .ball-number {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .ball-count { color: var(--accent); font-size: 13px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid #243244;
+      font-size: 14px;
+    }
+
+    th { color: var(--muted); font-weight: 600; }
+    .num-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .num-badge {
+      min-width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #0ea5e9;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .grand-badge {
+      background: #f59e0b;
+      color: #111827;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      margin-top: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+      .balls-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .topbar { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .balls-grid { grid-template-columns: repeat(3, 1fr); }
+      .container { padding: 14px; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Grand 統計分析</h1>
+    <div class="subtitle">可直接放上 GitHub Pages，用 CSV 做歷史開獎分析</div>
+
+    <div class="hint">
+      用法：你先準備一個 <strong>daily_grand_results.csv</strong> 檔，欄位建議用：
+      <strong>date,n1,n2,n3,n4,n5,grand</strong>。<br>
+      例子：<code>2026-04-01,2,11,17,29,41,6</code><br>
+      之後將這個 HTML 檔放去 GitHub repo，再把 CSV 一齊上載，就可以自動讀取統計。
+    </div>
+
+    <div class="topbar">
+      <input id="searchInput" class="search" placeholder="搜尋號碼，例如：7 或 7,12" />
+      <input id="csvFileInput" class="file-input" type="file" accept=".csv" />
+      <button class="btn" id="loadSampleBtn">載入 repo 內 CSV</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="metric-label">總期數</div>
+        <div class="metric-value" id="totalDraws">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最近一期</div>
+        <div class="metric-value" id="latestDate">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最常出現主號碼</div>
+        <div class="metric-value" id="topMain">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最常出現 Grand 號碼</div>
+        <div class="metric-value" id="topGrand">-</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <h2 class="section-title">主號碼出現次數（1-49）</h2>
+        <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">Grand 號碼出現次數（1-7）</h2>
+        <div class="chart-wrap"><canvas id="grandChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <h2 class="section-title">最熱主號碼 Top 14</h2>
+        <div class="balls-grid" id="hotMainNumbers"></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">最冷主號碼 Top 14</h2>
+        <div class="balls-grid" id="coldMainNumbers"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">最近開獎記錄</h2>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>號碼</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-note">
+        你之後仲可以再加：連續未開期數、組合分析、奇偶比例、大小分佈、指定號碼最近幾期有冇出現。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allRows = [];
+    let mainChartInstance = null;
+    let grandChartInstance = null;
+
+    function normalizeRow(row) {
+      return {
+        date: row.date,
+        numbers: [row.n1, row.n2, row.n3, row.n4, row.n5].map(v => Number(v)).filter(v => !Number.isNaN(v)),
+        grand: Number(row.grand)
+      };
+    }
+
+    function isValidRow(row) {
+      return row.date && row.numbers.length === 5 && !Number.isNaN(row.grand);
+    }
+
+    function countMainFrequencies(rows) {
+      const freq = {};
+      for (let i = 1; i <= 49; i++) freq[i] = 0;
+      rows.forEach(r => r.numbers.forEach(n => {
+        if (freq[n] !== undefined) freq[n] += 1;
+      }));
+      return freq;
+    }
+
+    function countGrandFrequencies(rows) {
+      const freq = {};
+      for (let i = 1; i <= 7; i++) freq[i] = 0;
+      rows.forEach(r => {
+        if (freq[r.grand] !== undefined) freq[r.grand] += 1;
+      });
+      return freq;
+    }
+
+    function getTopEntry(freq) {
+      return Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+    }
+
+    function renderMetrics(rows, mainFreq, grandFreq) {
+      document.getElementById('totalDraws').textContent = rows.length;
+      document.getElementById('latestDate').textContent = rows[0]?.date || '-';
+
+      const topMain = getTopEntry(mainFreq);
+      const topGrand = getTopEntry(grandFreq);
+      document.getElementById('topMain').textContent = topMain ? `${topMain[0]} (${topMain[1]}次)` : '-';
+      document.getElementById('topGrand').textContent = topGrand ? `${topGrand[0]} (${topGrand[1]}次)` : '-';
+    }
+
+    function renderChart(canvasId, existingChart, labels, values, label) {
+      if (existingChart) existingChart.destroy();
+      return new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data: values,
+            backgroundColor: canvasId === 'mainChart' ? 'rgba(56, 189, 248, 0.7)' : 'rgba(34, 197, 94, 0.7)',
+            borderColor: canvasId === 'mainChart' ? 'rgba(56, 189, 248, 1)' : 'rgba(34, 197, 94, 1)',
+            borderWidth: 1,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } }
+          },
+          scales: {
+            x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+
+    function renderHotCold(mainFreq) {
+      const entries = Object.entries(mainFreq).map(([num, count]) => ({ num: Number(num), count }));
+      const hot = [...entries].sort((a, b) => b.count - a.count || a.num - b.num).slice(0, 14);
+      const cold = [...entries].sort((a, b) => a.count - b.count || a.num - b.num).slice(0, 14);
+
+      document.getElementById('hotMainNumbers').innerHTML = hot.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">${item.count} 次</div>
+        </div>
+      `).join('');
+
+      document.getElementById('coldMainNumbers').innerHTML = cold.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">${item.count} 次</div>
+        </div>
+      `).join('');
+    }
+
+    function renderTable(rows) {
+      document.getElementById('resultsTableBody').innerHTML = rows.slice(0, 30).map(r => `
+        <tr>
+          <td>${r.date}</td>
+          <td>
+            <div class="num-row">
+              ${r.numbers.map(n => `<span class="num-badge">${n}</span>`).join('')}
+              <span class="num-badge grand-badge">G ${r.grand}</span>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function applySearch(rows) {
+      const raw = document.getElementById('searchInput').value.trim();
+      if (!raw) return rows;
+      const targets = raw.split(',').map(v => Number(v.trim())).filter(v => !Number.isNaN(v));
+      if (!targets.length) return rows;
+      return rows.filter(r => targets.every(t => r.numbers.includes(t) || r.grand === t));
+    }
+
+    function renderDashboard(rows) {
+      const filteredRows = applySearch(rows);
+      const mainFreq = countMainFrequencies(filteredRows);
+      const grandFreq = countGrandFrequencies(filteredRows);
+
+      renderMetrics(filteredRows, mainFreq, grandFreq);
+      renderHotCold(mainFreq);
+      renderTable(filteredRows);
+
+      mainChartInstance = renderChart(
+        'mainChart',
+        mainChartInstance,
+        Object.keys(mainFreq),
+        Object.values(mainFreq),
+        '主號碼次數'
+      );
+
+      grandChartInstance = renderChart(
+        'grandChart',
+        grandChartInstance,
+        Object.keys(grandFreq),
+        Object.values(grandFreq),
+        'Grand 次數'
+      );
+    }
+
+    function processCsvText(csvText) {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          allRows = results.data
+            .map(normalizeRow)
+            .filter(isValidRow)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          if (!allRows.length) {
+            alert('讀唔到有效資料，請檢查 CSV 欄位係咪：date,n1,n2,n3,n4,n5,grand');
+            return;
+          }
+          renderDashboard(allRows);
+        }
+      });
+    }
+
+    async function loadRepoCsv() {
+      try {
+        const res = await fetch('./daily_grand_results.csv');
+        if (!res.ok) throw new Error('CSV not found');
+        const text = await res.text();
+        processCsvText(text);
+      } catch (err) {
+        alert('讀取 repo 內 CSV 失敗，請確認已上載 daily_grand_results.csv');
+      }
+    }
+
+    document.getElementById('csvFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => processCsvText(event.target.result);
+      reader.readAsText(file);
+    });
+
+    document.getElementById('searchInput').addEventListener('input', () => {
+      if (allRows.length) renderDashboard(allRows);
+    });
+
+    document.getElementById('loadSampleBtn').addEventListener('click', loadRepoCsv);
+
+    loadRepoCsv();
+  </script>
+</body>
+</html>

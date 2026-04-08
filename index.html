@@ -1,169 +1,844 @@
-import fs from "fs/promises";
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Grand 統計分析</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0f172a;
+      --panel-2: #111827;
+      --line: #243244;
+      --text: #e5eefb;
+      --muted: #93a4bd;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --pink: #f472b6;
+      --red: #f87171;
+    }
 
-const END_YEAR = new Date().getFullYear();
-const START_YEAR = END_YEAR - 3;
+    * { box-sizing: border-box; }
 
-function decodeHtmlEntities(str) {
-  return str
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-}
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background: linear-gradient(180deg, #020617, #0b1324 45%, #07111f);
+      color: var(--text);
+    }
 
-function htmlToPlainText(html) {
-  return decodeHtmlEntities(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, "\n")
-      .replace(/<style[\s\S]*?<\/style>/gi, "\n")
-      .replace(/<noscript[\s\S]*?<\/noscript>/gi, "\n")
-      .replace(/<svg[\s\S]*?<\/svg>/gi, "\n")
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(p|div|section|article|tr|table|ul|ol|li|h1|h2|h3|h4|h5|h6)>/gi, "\n")
-      .replace(/<[^>]+>/g, "\n")
-      .replace(/\r/g, "")
-  );
-}
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px;
+    }
 
-function toIsoDate(text) {
-  const d = new Date(text.replace(/\s+/g, " ").trim());
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
-}
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
 
-function extractDrawsFromText(text) {
-  const lines = text
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
 
-  const draws = [];
-  const seen = new Set();
+    .notice {
+      background: rgba(56, 189, 248, 0.10);
+      color: #c6ecff;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 14px 16px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
 
-  for (let i = 0; i < lines.length; i++) {
-    const weekday = lines[i];
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
 
-    if (weekday !== "Monday" && weekday !== "Thursday") continue;
+    .search, .btn, .small-input {
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
 
-    let dateLine = "";
-    let j = i + 1;
+    .search, .small-input {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
 
-    while (j < lines.length && j <= i + 5) {
-      if (/^[A-Za-z]+ \d{1,2} \d{4}$/.test(lines[j])) {
-        dateLine = lines[j];
-        break;
+    .btn {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.20);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric-value {
+      margin-top: 8px;
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .layout-2 {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .layout-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .layout-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .chart-box {
+      height: 320px;
+    }
+
+    .special-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+
+    .special-item, .mini-stat {
+      background: var(--panel-2);
+      border: 1px solid #2f4057;
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .special-no {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #fde68a;
+    }
+
+    .special-count {
+      color: #cde9ff;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .special-pct {
+      color: #86efac;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .balls-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+
+    .ball-stat {
+      background: var(--panel-2);
+      border: 1px solid #2f4057;
+      border-radius: 14px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .ball-number {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .ball-count {
+      color: #93c5fd;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .mini-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .mini-value {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr 120px auto;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .trend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-2);
+      border: 1px solid #2f4057;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .trend-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      background: rgba(56, 189, 248, 0.18);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #d8f2ff;
+    }
+
+    .pill.hit {
+      background: rgba(34, 197, 94, 0.20);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #bbf7d0;
+    }
+
+    .pill.miss {
+      background: rgba(248, 113, 113, 0.18);
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fecaca;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .num-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .num-badge {
+      min-width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(56, 189, 248, 0.9);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .num-badge.special {
+      background: rgba(245, 158, 11, 0.95);
+      color: #111827;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .layout-2, .layout-3, .layout-4 { grid-template-columns: 1fr; }
+      .special-grid, .balls-grid { grid-template-columns: repeat(4, 1fr); }
+      .mini-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .container { padding: 14px; }
+      .metrics { grid-template-columns: 1fr; }
+      .topbar { grid-template-columns: 1fr; }
+      .controls-row { grid-template-columns: 1fr; }
+      .special-grid, .balls-grid, .mini-grid { grid-template-columns: repeat(2, 1fr); }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Grand 統計分析</h1>
+    <div class="subtitle">讀取 GitHub repo 入面嘅 JSON 歷史資料，自動分析主號碼 1–49 同特別號碼 1–7。</div>
+
+    <div class="notice">
+      此頁會讀取 <strong>data/daily_grand_results.json</strong>。<br>
+      功能包括：特別號碼百分比、連續未出期數、奇偶比例、大細分佈、尾數分析、指定號碼最近 N 期走勢。
+    </div>
+
+    <div class="topbar">
+      <input id="searchInput" class="search" placeholder="搜尋號碼，例如：7 或 7,12" />
+      <button id="reloadBtn" class="btn">重新載入資料</button>
+    </div>
+
+    <div class="metrics">
+      <div class="card">
+        <div class="metric-label">總期數</div>
+        <div class="metric-value" id="totalDraws">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最近一期日期</div>
+        <div class="metric-value" id="latestDate">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最常見主號碼</div>
+        <div class="metric-value" id="topMain">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">最常見特別號碼</div>
+        <div class="metric-value" id="topSpecial">-</div>
+      </div>
+    </div>
+
+    <div class="layout-2">
+      <div class="card">
+        <h2 class="section-title">主號碼出現次數（1–49）</h2>
+        <div class="chart-box"><canvas id="mainChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">特別號碼百分比分佈（1–7）</h2>
+        <div class="special-grid" id="specialPercentGrid"></div>
+        <div class="footer-note">公式：某特別號碼出現次數 ÷ 總期數 × 100%</div>
+      </div>
+    </div>
+
+    <div class="layout-3">
+      <div class="card">
+        <h2 class="section-title">特別號碼出現次數（1–7）</h2>
+        <div class="chart-box"><canvas id="specialChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">主號碼熱門 / 冷門</h2>
+        <div style="margin-bottom:14px; font-weight:700;">最熱 Top 14</div>
+        <div class="balls-grid" id="hotMainNumbers"></div>
+        <div style="height:18px"></div>
+        <div style="margin-bottom:14px; font-weight:700;">最冷 Top 14</div>
+        <div class="balls-grid" id="coldMainNumbers"></div>
+      </div>
+    </div>
+
+    <div class="layout-4">
+      <div class="card">
+        <h2 class="section-title">連續未出期數（1–49）</h2>
+        <div class="balls-grid" id="skipGrid"></div>
+        <div class="small-note">數值愈大，代表該號碼已經愈多期冇出現。</div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">奇偶比例 / 大細分佈</h2>
+        <div class="mini-grid" id="ratioGrid"></div>
+        <div class="small-note">
+          奇偶比例只計主號碼 5 粒。<br>
+          大細分佈預設：1–24 = 小，25–49 = 大。
+        </div>
+      </div>
+    </div>
+
+    <div class="layout-4">
+      <div class="card">
+        <h2 class="section-title">尾數分析（主號碼）</h2>
+        <div class="chart-box"><canvas id="tailChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">指定號碼最近 N 期走勢</h2>
+        <div class="controls-row">
+          <input id="trendNumberInput" class="small-input" type="number" min="1" max="49" value="7" placeholder="號碼" />
+          <input id="trendLimitInput" class="small-input" type="number" min="5" max="100" value="20" placeholder="期數" />
+          <button id="trendBtn" class="btn">更新走勢</button>
+        </div>
+        <div id="trendSummary" class="small-note" style="margin-bottom: 12px;"></div>
+        <div id="trendList"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">最近開獎記錄</h2>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>號碼</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-note">
+        搜尋框可篩選指定號碼。輸入單一號碼例如 <strong>7</strong>，或者輸入組合例如 <strong>7,12</strong>。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allRows = [];
+    let mainChartInstance = null;
+    let specialChartInstance = null;
+    let tailChartInstance = null;
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-CA");
+    }
+
+    function countMainFrequencies(rows) {
+      const freq = {};
+      for (let i = 1; i <= 49; i++) freq[i] = 0;
+      rows.forEach(r => r.numbers.forEach(n => {
+        if (freq[n] !== undefined) freq[n] += 1;
+      }));
+      return freq;
+    }
+
+    function countSpecialFrequencies(rows) {
+      const freq = {};
+      for (let i = 1; i <= 7; i++) freq[i] = 0;
+      rows.forEach(r => {
+        if (freq[r.special] !== undefined) freq[r.special] += 1;
+      });
+      return freq;
+    }
+
+    function countTailFrequencies(rows) {
+      const freq = {};
+      for (let i = 0; i <= 9; i++) freq[i] = 0;
+      rows.forEach(r => {
+        r.numbers.forEach(n => {
+          const tail = n % 10;
+          freq[tail] += 1;
+        });
+      });
+      return freq;
+    }
+
+    function getTopEntry(freq) {
+      return Object.entries(freq).sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))[0];
+    }
+
+    function applySearch(rows) {
+      const raw = document.getElementById("searchInput").value.trim();
+      if (!raw) return rows;
+      const targets = raw.split(",").map(v => Number(v.trim())).filter(v => !Number.isNaN(v));
+      if (!targets.length) return rows;
+      return rows.filter(r => targets.every(t => r.numbers.includes(t) || r.special === t));
+    }
+
+    function renderMetrics(rows, mainFreq, specialFreq) {
+      document.getElementById("totalDraws").textContent = rows.length;
+      document.getElementById("latestDate").textContent = rows[0] ? formatDate(rows[0].date) : "-";
+
+      const topMain = getTopEntry(mainFreq);
+      const topSpecial = getTopEntry(specialFreq);
+
+      document.getElementById("topMain").textContent = topMain ? `${topMain[0]} (${topMain[1]}次)` : "-";
+      document.getElementById("topSpecial").textContent = topSpecial ? `${topSpecial[0]} (${topSpecial[1]}次)` : "-";
+    }
+
+    function renderChart(canvasId, currentInstance, labels, data, label, colorA, colorB) {
+      if (currentInstance) currentInstance.destroy();
+      return new Chart(document.getElementById(canvasId), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data,
+            backgroundColor: colorA,
+            borderColor: colorB,
+            borderWidth: 1,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#dbeafe" } }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#cbd5e1" },
+              grid: { color: "rgba(255,255,255,0.05)" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#cbd5e1" },
+              grid: { color: "rgba(255,255,255,0.05)" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderSpecialPercentages(specialFreq, totalDraws) {
+      const el = document.getElementById("specialPercentGrid");
+      const html = [];
+      for (let i = 1; i <= 7; i++) {
+        const count = specialFreq[i] || 0;
+        const pct = totalDraws ? ((count / totalDraws) * 100).toFixed(2) : "0.00";
+        html.push(`
+          <div class="special-item">
+            <div class="special-no">${i}</div>
+            <div class="special-count">${count} 次</div>
+            <div class="special-pct">${pct}%</div>
+          </div>
+        `);
       }
-      j++;
+      el.innerHTML = html.join("");
     }
 
-    if (!dateLine) continue;
+    function renderHotCold(mainFreq) {
+      const entries = Object.entries(mainFreq).map(([num, count]) => ({ num: Number(num), count }));
 
-    const date = toIsoDate(dateLine);
-    if (!date) continue;
+      const hot = [...entries]
+        .sort((a, b) => b.count - a.count || a.num - b.num)
+        .slice(0, 14);
 
-    const nums = [];
-    let k = j + 1;
+      const cold = [...entries]
+        .sort((a, b) => a.count - b.count || a.num - b.num)
+        .slice(0, 14);
 
-    while (k < lines.length && k <= j + 30 && nums.length < 6) {
-      const line = lines[k];
+      document.getElementById("hotMainNumbers").innerHTML = hot.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">${item.count} 次</div>
+        </div>
+      `).join("");
 
-      if (/^\d{1,2}$/.test(line)) {
-        nums.push(Number(line));
-      } else {
-        const starMatch = line.match(/^\*\s*(\d{1,2})$/);
-        if (starMatch) nums.push(Number(starMatch[1]));
+      document.getElementById("coldMainNumbers").innerHTML = cold.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">${item.count} 次</div>
+        </div>
+      `).join("");
+    }
+
+    function calculateSkipCounts(rows) {
+      const result = [];
+      for (let num = 1; num <= 49; num++) {
+        let skip = 0;
+        let found = false;
+
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].numbers.includes(num)) {
+            found = true;
+            break;
+          }
+          skip += 1;
+        }
+
+        result.push({
+          num,
+          skip: found ? skip : rows.length
+        });
       }
 
-      k++;
+      return result.sort((a, b) => b.skip - a.skip || a.num - b.num);
     }
 
-    if (nums.length !== 6) continue;
-
-    const mainNumbers = nums.slice(0, 5);
-    const special = nums[5];
-
-    if (
-      !mainNumbers.every((n) => Number.isInteger(n) && n >= 1 && n <= 49) ||
-      !Number.isInteger(special) ||
-      special < 1 ||
-      special > 7
-    ) {
-      continue;
+    function renderSkipGrid(rows) {
+      const data = calculateSkipCounts(rows).slice(0, 14);
+      document.getElementById("skipGrid").innerHTML = data.map(item => `
+        <div class="ball-stat">
+          <div class="ball-number">${item.num}</div>
+          <div class="ball-count">${item.skip} 期未出</div>
+        </div>
+      `).join("");
     }
 
-    const key = `${date}|${mainNumbers.join("-")}|${special}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    function calculateOddEvenAndSize(rows) {
+      let odd = 0;
+      let even = 0;
+      let small = 0;
+      let big = 0;
 
-    draws.push({
-      date,
-      numbers: [...mainNumbers].sort((a, b) => a - b),
-      special
+      rows.forEach(r => {
+        r.numbers.forEach(n => {
+          if (n % 2 === 0) even += 1;
+          else odd += 1;
+
+          if (n <= 24) small += 1;
+          else big += 1;
+        });
+      });
+
+      const totalMain = odd + even;
+
+      return {
+        odd,
+        even,
+        small,
+        big,
+        oddPct: totalMain ? ((odd / totalMain) * 100).toFixed(2) : "0.00",
+        evenPct: totalMain ? ((even / totalMain) * 100).toFixed(2) : "0.00",
+        smallPct: totalMain ? ((small / totalMain) * 100).toFixed(2) : "0.00",
+        bigPct: totalMain ? ((big / totalMain) * 100).toFixed(2) : "0.00"
+      };
+    }
+
+    function renderRatioGrid(rows) {
+      const stats = calculateOddEvenAndSize(rows);
+      document.getElementById("ratioGrid").innerHTML = `
+        <div class="mini-stat">
+          <div class="mini-label">奇數</div>
+          <div class="mini-value">${stats.odd}</div>
+          <div class="small-note">${stats.oddPct}%</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-label">偶數</div>
+          <div class="mini-value">${stats.even}</div>
+          <div class="small-note">${stats.evenPct}%</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-label">小（1–24）</div>
+          <div class="mini-value">${stats.small}</div>
+          <div class="small-note">${stats.smallPct}%</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-label">大（25–49）</div>
+          <div class="mini-value">${stats.big}</div>
+          <div class="small-note">${stats.bigPct}%</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-label">主號碼總數</div>
+          <div class="mini-value">${stats.odd + stats.even}</div>
+          <div class="small-note">5 x ${rows.length} 期</div>
+        </div>
+      `;
+    }
+
+    function renderTailChart(rows) {
+      const tailFreq = countTailFrequencies(rows);
+      tailChartInstance = renderChart(
+        "tailChart",
+        tailChartInstance,
+        Object.keys(tailFreq),
+        Object.values(tailFreq),
+        "尾數次數",
+        "rgba(244, 114, 182, 0.75)",
+        "rgba(244, 114, 182, 1)"
+      );
+    }
+
+    function renderTrend() {
+      if (!allRows.length) return;
+
+      const num = Number(document.getElementById("trendNumberInput").value);
+      const limit = Number(document.getElementById("trendLimitInput").value);
+
+      if (!Number.isInteger(num) || num < 1 || num > 49) {
+        document.getElementById("trendSummary").textContent = "請輸入 1 至 49 之間的主號碼。";
+        document.getElementById("trendList").innerHTML = "";
+        return;
+      }
+
+      const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
+      const latestRows = allRows.slice(0, safeLimit);
+
+      let hitCount = 0;
+      const html = latestRows.map(r => {
+        const hit = r.numbers.includes(num);
+        if (hit) hitCount += 1;
+
+        return `
+          <div class="trend-item">
+            <div class="trend-left">
+              <span class="pill">${formatDate(r.date)}</span>
+              ${r.numbers.map(n => `<span class="pill ${n === num ? "hit" : ""}">${n}</span>`).join("")}
+              <span class="pill">S ${r.special}</span>
+            </div>
+            <div>
+              <span class="pill ${hit ? "hit" : "miss"}">${hit ? "有開出" : "冇開出"}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("trendSummary").textContent =
+        `號碼 ${num} 最近 ${safeLimit} 期出現 ${hitCount} 次。`;
+
+      document.getElementById("trendList").innerHTML = html;
+    }
+
+    function renderTable(rows) {
+      document.getElementById("resultsTableBody").innerHTML = rows.slice(0, 40).map(r => `
+        <tr>
+          <td>${formatDate(r.date)}</td>
+          <td>
+            <div class="num-row">
+              ${r.numbers.map(n => `<span class="num-badge">${n}</span>`).join("")}
+              <span class="num-badge special">S ${r.special}</span>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function renderDashboard(rows) {
+      const filteredRows = applySearch(rows);
+      const mainFreq = countMainFrequencies(filteredRows);
+      const specialFreq = countSpecialFrequencies(filteredRows);
+
+      renderMetrics(filteredRows, mainFreq, specialFreq);
+      renderSpecialPercentages(specialFreq, filteredRows.length);
+      renderHotCold(mainFreq);
+      renderSkipGrid(filteredRows);
+      renderRatioGrid(filteredRows);
+      renderTailChart(filteredRows);
+      renderTable(filteredRows);
+
+      mainChartInstance = renderChart(
+        "mainChart",
+        mainChartInstance,
+        Object.keys(mainFreq),
+        Object.values(mainFreq),
+        "主號碼次數",
+        "rgba(56, 189, 248, 0.70)",
+        "rgba(56, 189, 248, 1)"
+      );
+
+      specialChartInstance = renderChart(
+        "specialChart",
+        specialChartInstance,
+        Object.keys(specialFreq),
+        Object.values(specialFreq),
+        "特別號碼次數",
+        "rgba(245, 158, 11, 0.75)",
+        "rgba(245, 158, 11, 1)"
+      );
+
+      renderTrend();
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch("./data/daily_grand_results.json?ts=" + Date.now());
+        if (!res.ok) throw new Error("Cannot load JSON");
+
+        const rows = await res.json();
+
+        allRows = rows
+          .filter(r =>
+            r &&
+            r.date &&
+            Array.isArray(r.numbers) &&
+            r.numbers.length === 5 &&
+            Number.isInteger(r.special)
+          )
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (!allRows.length) {
+          alert("搵唔到有效資料，請檢查 data/daily_grand_results.json");
+          return;
+        }
+
+        renderDashboard(allRows);
+      } catch (err) {
+        console.error(err);
+        alert("載入資料失敗。請確認 repo 已經有 data/daily_grand_results.json");
+      }
+    }
+
+    document.getElementById("searchInput").addEventListener("input", () => {
+      if (allRows.length) renderDashboard(allRows);
     });
-  }
 
-  return draws;
-}
+    document.getElementById("reloadBtn").addEventListener("click", loadData);
+    document.getElementById("trendBtn").addEventListener("click", renderTrend);
+    document.getElementById("trendNumberInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") renderTrend();
+    });
+    document.getElementById("trendLimitInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") renderTrend();
+    });
 
-async function fetchYear(year) {
-  const url = `https://ca.lottonumbers.com/daily-grand/numbers/${year}`;
-  const res = await fetch(url, {
-    headers: {
-      "user-agent": "Mozilla/5.0",
-      "accept-language": "en-CA,en;q=0.9"
-    }
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${year}: ${res.status}`);
-  }
-
-  const html = await res.text();
-  const text = htmlToPlainText(html);
-  const draws = extractDrawsFromText(text);
-
-  console.log(`Fetched ${year}: ${draws.length} draws`);
-  return draws;
-}
-
-function dedupeDraws(draws) {
-  const map = new Map();
-
-  for (const draw of draws) {
-    const key = `${draw.date}|${draw.numbers.join("-")}|${draw.special}`;
-    map.set(key, draw);
-  }
-
-  return [...map.values()].sort((a, b) => b.date.localeCompare(a.date));
-}
-
-async function main() {
-  const all = [];
-
-  for (let year = START_YEAR; year <= END_YEAR; year++) {
-    const draws = await fetchYear(year);
-    all.push(...draws);
-  }
-
-  const finalData = dedupeDraws(all);
-
-  await fs.mkdir("data", { recursive: true });
-  await fs.writeFile(
-    "data/daily_grand_results.json",
-    JSON.stringify(finalData, null, 2),
-    "utf8"
-  );
-
-  console.log(`Saved ${finalData.length} draws to data/daily_grand_results.json`);
-
-  if (finalData.length === 0) {
-    throw new Error("No draws were parsed. Check page structure.");
-  }
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+    loadData();
+  </script>
+</body>
+</html>

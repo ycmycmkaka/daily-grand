@@ -352,15 +352,16 @@
     </div>
 
     <div class="filter-bar">
-      <label for="drawLimitSelect">統計期數：</label>
-      <select id="drawLimitSelect" class="filter-select">
-        <option value="10">最近 10 期</option>
-        <option value="15">最近 15 期</option>
-        <option value="20">最近 20 期</option>
-        <option value="30">最近 30 期</option>
-        <option value="50">最近 50 期</option>
-        <option value="all" selected>全部期數</option>
-      </select>
+      <label for="drawLimitInput">統計期數：</label>
+      <input
+        id="drawLimitInput"
+        class="filter-select"
+        type="number"
+        min="1"
+        step="1"
+        placeholder="全部"
+        style="width:120px;"
+      />
     </div>
 
     <div class="metrics">
@@ -488,10 +489,12 @@
     }
 
     function getFilteredRowsByLimit(rows) {
-      const limitValue = document.getElementById("drawLimitSelect")?.value || "all";
-      if (limitValue === "all") return rows;
-      const limit = parseInt(limitValue, 10);
+      const rawValue = document.getElementById("drawLimitInput")?.value?.trim() || "";
+      if (!rawValue) return rows;
+
+      const limit = parseInt(rawValue, 10);
       if (isNaN(limit) || limit <= 0) return rows;
+
       return rows.slice(0, limit);
     }
 

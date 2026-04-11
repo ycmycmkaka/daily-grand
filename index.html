@@ -509,8 +509,8 @@
       document.getElementById("topSpecial").textContent = topSpecial ? `${topSpecial[0]} (${topSpecial[1]}次)` : "-";
 
       const oldest = allRowsFull[allRowsFull.length - 1];
-      const limitValue = document.getElementById("drawLimitSelect")?.value || "all";
-      const scopeText = limitValue === "all" ? "全部期數" : `最近 ${rows.length} 期`;
+      const rawValue = document.getElementById("drawLimitInput")?.value?.trim() || "";
+      const scopeText = rawValue ? `最近 ${rows.length} 期` : "全部期數";
 
       document.getElementById("historySummary").textContent = oldest
         ? `目前統計範圍：${scopeText} · 全庫日期由 ${formatDate(oldest.date)} 至 ${formatDate(allRowsFull[0].date)}`
@@ -838,7 +838,7 @@
     }
 
     document.getElementById("reloadBtn").addEventListener("click", loadData);
-    document.getElementById("drawLimitSelect").addEventListener("change", () => {
+    document.getElementById("drawLimitInput").addEventListener("input", () => {
       if (allRows.length) renderDashboard(allRows);
     });
 

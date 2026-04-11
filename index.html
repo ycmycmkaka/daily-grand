@@ -714,8 +714,8 @@
     }
 
     function renderTable(rows) {
-      const visibleRows = rows.slice(0, 80);
-      document.getElementById("tableNote").textContent = `顯示最近 ${visibleRows.length} 期（總共 ${rows.length} 期）`;
+      const visibleRows = rows.slice(0, rows.length);
+      document.getElementById("tableNote").textContent = `顯示全部 ${rows.length} 期`;
 
       document.getElementById("resultsTableBody").innerHTML = visibleRows.map((r, index) => {
         const previous = visibleRows[index + 1] || null;

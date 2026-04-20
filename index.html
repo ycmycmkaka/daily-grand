@@ -76,6 +76,7 @@
       align-items: center;
       gap: 10px;
       margin-bottom: 18px;
+      flex-wrap: wrap;
     }
 
     .filter-bar label {
@@ -182,7 +183,8 @@
       font-weight: 700;
     }
 
-    .analysis-card {
+    .analysis-card,
+    .compare-card {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -190,7 +192,8 @@
       box-shadow: var(--shadow);
     }
 
-    .analysis-title {
+    .analysis-title,
+    .compare-title {
       margin: 0 0 16px;
       font-size: 18px;
       font-weight: 800;
@@ -225,6 +228,83 @@
     .blue { background: var(--blue); }
     .green { background: var(--green); }
     .red { background: var(--red); }
+
+    .compare-input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .compare-input {
+      flex: 1;
+      min-width: 260px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .compare-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .compare-btn:hover {
+      opacity: 0.92;
+    }
+
+    .compare-result-wrap {
+      display: grid;
+      gap: 10px;
+    }
+
+    .compare-summary {
+      padding: 12px;
+      border-radius: 12px;
+      background: #eef6ff;
+      border: 1px solid #dbeafe;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .compare-hit-card {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f8fbff;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .match-balls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .match-ball {
+      display: inline-flex;
+      min-width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      align-items: center;
+      justify-content: center;
+      background: rgba(31, 124, 255, 0.14);
+      color: #1f7cff;
+      border: 1px solid #bcd6ff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 0 8px;
+    }
 
     .table-topline {
       display: flex;
@@ -338,6 +418,8 @@
       .analysis-row { grid-template-columns: 1fr 120px 52px; }
       h1 { font-size: 28px; }
       .metric-value { font-size: 24px; }
+      .compare-input-row { flex-direction: column; align-items: stretch; }
+      .compare-btn { width: 100%; }
     }
   </style>
 </head>
@@ -408,6 +490,15 @@
     <div class="card" style="margin-bottom: 20px;">
       <h2 class="section-title">連續 15 期或以上未開號碼</h2>
       <div class="balls-grid" id="missingLongGrid"></div>
+    </div>
+
+    <div class="compare-card" style="margin-bottom: 20px;">
+      <h2 class="compare-title">歷史對比查詢（輸入 5 個主號碼）</h2>
+      <div class="compare-input-row">
+        <input id="compareInput" class="compare-input" type="text" placeholder="例如：8,17,29,33,38" />
+        <button id="compareBtn" class="compare-btn">開始比對</button>
+      </div>
+      <div id="compareResult" class="empty-note">輸入 5 個不重複主號碼，系統會幫你搵出歷史上最多相同主號碼嘅期數。</div>
     </div>
 
     <div class="layout-4">
@@ -496,6 +587,93 @@
       if (isNaN(limit) || limit <= 0) return rows;
 
       return rows.slice(0, limit);
+    }
+
+    function parseUserNumbers(input) {
+      const nums = input
+        .split(/[^0-9]+/)
+        .map(x => parseInt(x, 10))
+        .filter(x => !isNaN(x));
+
+      const uniqueNums = [...new Set(nums)];
+
+      if (uniqueNums.length !== 5) {
+        return { error: "請輸入 5 個不重複主號碼。" };
+      }
+
+      if (uniqueNums.some(n => n < 1 || n > 49)) {
+        return { error: "號碼必須介乎 1 至 49。" };
+      }
+
+      uniqueNums.sort((a, b) => a - b);
+      return { numbers: uniqueNums };
+    }
+
+    function compareUserNumbers(rows, userNumbers) {
+      let maxMatch = 0;
+      let bestRows = [];
+
+      rows.forEach(row => {
+        const drawNums = Array.isArray(row.numbers) ? row.numbers : [];
+        const matched = userNumbers.filter(n => drawNums.includes(n));
+
+        if (matched.length > maxMatch) {
+          maxMatch = matched.length;
+          bestRows = [{
+            date: row.date || "-",
+            drawNums,
+            special: row.special || "-",
+            matched
+          }];
+        } else if (matched.length === maxMatch) {
+          bestRows.push({
+            date: row.date || "-",
+            drawNums,
+            special: row.special || "-",
+            matched
+          });
+        }
+      });
+
+      return { maxMatch, bestRows };
+    }
+
+    function runNumberComparison(rows) {
+      const input = document.getElementById("compareInput").value.trim();
+      const resultBox = document.getElementById("compareResult");
+
+      const parsed = parseUserNumbers(input);
+      if (parsed.error) {
+        resultBox.innerHTML = `<span style="color:#d93025; font-weight:bold;">${parsed.error}</span>`;
+        return;
+      }
+
+      const result = compareUserNumbers(rows, parsed.numbers);
+
+      if (!result.bestRows.length || result.maxMatch === 0) {
+        resultBox.innerHTML = `冇搵到任何一期有相同主號碼。`;
+        return;
+      }
+
+      resultBox.innerHTML = `
+        <div class="compare-result-wrap">
+          <div class="compare-summary">
+            <div><strong>你輸入嘅主號碼：</strong>${parsed.numbers.join(", ")}</div>
+            <div><strong>歷史最多相同主號碼：</strong>${result.maxMatch} 個</div>
+          </div>
+          ${result.bestRows.map(r => `
+            <div class="compare-hit-card">
+              <div><strong>期數：</strong>${r.date}</div>
+              <div><strong>當期主號碼：</strong>${r.drawNums.join(", ")}</div>
+              <div><strong>當期特別號碼：</strong>${r.special}</div>
+              <div><strong>相同號碼：</strong></div>
+              <div class="match-balls">
+                ${r.matched.map(n => `<span class="match-ball">${n}</span>`).join("") || "無"}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
     }
 
     function renderMetrics(rows, mainFreq, specialFreq, allRowsFull) {
@@ -647,33 +825,33 @@
     }
 
     function getZoneCount(numbers) {
-  const zones = new Set();
-  numbers.forEach(n => {
-    if (n >= 1 && n <= 10) zones.add(1);
-    else if (n <= 20) zones.add(2);
-    else if (n <= 30) zones.add(3);
-    else if (n <= 40) zones.add(4);
-    else zones.add(5);
-  });
-  return zones.size;
-}
+      const zones = new Set();
+      numbers.forEach(n => {
+        if (n >= 1 && n <= 10) zones.add(1);
+        else if (n <= 20) zones.add(2);
+        else if (n <= 30) zones.add(3);
+        else if (n <= 40) zones.add(4);
+        else zones.add(5);
+      });
+      return zones.size;
+    }
 
-function getZoneCountTuple(numbers) {
-  const counts = [0, 0, 0, 0, 0];
+    function getZoneCountTuple(numbers) {
+      const counts = [0, 0, 0, 0, 0];
 
-  numbers.forEach(n => {
-    const num = parseInt(n, 10);
-    if (isNaN(num)) return;
+      numbers.forEach(n => {
+        const num = parseInt(n, 10);
+        if (isNaN(num)) return;
 
-    if (num >= 1 && num <= 10) counts[0]++;
-    else if (num <= 20) counts[1]++;
-    else if (num <= 30) counts[2]++;
-    else if (num <= 40) counts[3]++;
-    else if (num <= 49) counts[4]++;
-  });
+        if (num >= 1 && num <= 10) counts[0]++;
+        else if (num <= 20) counts[1]++;
+        else if (num <= 30) counts[2]++;
+        else if (num <= 40) counts[3]++;
+        else if (num <= 49) counts[4]++;
+      });
 
-  return `(${counts.join(",")})`;
-}
+      return `(${counts.join(",")})`;
+    }
 
     function countDistribution(items) {
       const map = {};
@@ -773,7 +951,7 @@ function getZoneCountTuple(numbers) {
           : `<span class="table-pill ${repeatCount === 0 ? "red" : "blue"}">${repeatCount}個</span>`;
 
         const zoneLabel = `<span class="table-pill blue">${getZoneCount(r.numbers)}個區 ${getZoneCountTuple(r.numbers)}</span>`;
-        
+
         return `
           <tr>
             <td>${formatDate(r.date)}</td>
@@ -857,6 +1035,14 @@ function getZoneCountTuple(numbers) {
     document.getElementById("reloadBtn").addEventListener("click", loadData);
     document.getElementById("drawLimitInput").addEventListener("input", () => {
       if (allRows.length) renderDashboard(allRows);
+    });
+    document.getElementById("compareBtn").addEventListener("click", () => {
+      if (allRows.length) runNumberComparison(allRows);
+    });
+    document.getElementById("compareInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && allRows.length) {
+        runNumberComparison(allRows);
+      }
     });
 
     loadData();

@@ -306,6 +306,64 @@
       padding: 0 8px;
     }
 
+    .zone-combo-wrap {
+      max-width: 1120px;
+      margin: 0 auto 20px auto;
+    }
+
+    .zone-combo-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .combo-note-card {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .combo-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 8px;
+    }
+
+    .combo-table {
+      width: 100%;
+      min-width: 0;
+      border-collapse: collapse;
+      font-size: 12px;
+      table-layout: auto;
+    }
+
+    .combo-table th,
+    .combo-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #e8eef6;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .combo-table th {
+      background: #f8fbff;
+      color: #666;
+      font-weight: 700;
+      position: static;
+    }
+
+    .combo-pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(31, 124, 255, 0.12);
+      color: #1f7cff;
+      font-weight: 700;
+      border: 1px solid #d2e3fc;
+    }
+
     .table-topline {
       display: flex;
       justify-content: space-between;
@@ -325,13 +383,14 @@
       border-radius: 18px;
     }
 
-    table {
+    table.main-table {
       width: 100%;
       border-collapse: collapse;
       background: white;
     }
 
-    th, td {
+    table.main-table th,
+    table.main-table td {
       padding: 14px 12px;
       text-align: left;
       border-bottom: 1px solid #e8eef6;
@@ -339,7 +398,7 @@
       vertical-align: top;
     }
 
-    th {
+    table.main-table th {
       color: var(--muted);
       font-weight: 700;
       background: #f8fbff;
@@ -406,6 +465,8 @@
     @media (max-width: 1024px) {
       .metrics { grid-template-columns: repeat(2, 1fr); }
       .layout-2, .layout-3 { grid-template-columns: 1fr; }
+      .zone-combo-wrap { max-width: 100%; }
+      .zone-combo-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
@@ -420,6 +481,20 @@
       .metric-value { font-size: 24px; }
       .compare-input-row { flex-direction: column; align-items: stretch; }
       .compare-btn { width: 100%; }
+
+      .combo-table {
+        font-size: 11px;
+      }
+
+      .combo-table th,
+      .combo-table td {
+        padding: 7px 4px;
+      }
+
+      .combo-pill {
+        padding: 3px 6px;
+        font-size: 11px;
+      }
     }
   </style>
 </head>
@@ -444,6 +519,16 @@
         placeholder="全部"
         style="width:120px;"
       />
+
+      <label for="zoneFilterSelect">分區篩選：</label>
+      <select id="zoneFilterSelect" class="filter-select">
+        <option value="">全部</option>
+        <option value="1">1個區</option>
+        <option value="2">2個區</option>
+        <option value="3">3個區</option>
+        <option value="4">4個區</option>
+        <option value="5">5個區</option>
+      </select>
     </div>
 
     <div class="metrics">
@@ -523,13 +608,34 @@
       </div>
     </div>
 
+    <div class="zone-combo-wrap">
+      <div class="zone-combo-grid">
+        <div class="card">
+          <h2 class="section-title">3區組合統計（10種）</h2>
+          <div class="combo-table-wrap" id="zoneCombo3Table"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">4區組合統計（5種）</h2>
+          <div class="combo-table-wrap" id="zoneCombo4Table"></div>
+        </div>
+      </div>
+
+      <div class="card combo-note-card">
+        <h2 class="section-title">分區統計說明</h2>
+        <div class="empty-note">
+          只統計主號碼覆蓋剛好 3 區或 4 區嘅組合，顯示 Total 同目前間隔。
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="table-topline">
         <h2 class="section-title" style="margin-bottom:0;">最近開獎記錄</h2>
         <div class="table-note" id="tableNote">顯示全部期數</div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="main-table">
           <thead>
             <tr>
               <th>日期</th>
@@ -935,8 +1041,16 @@
     }
 
     function renderTable(rows) {
-      const visibleRows = rows;
-      document.getElementById("tableNote").textContent = `顯示全部 ${rows.length} 期`;
+      const selectedZone = document.getElementById("zoneFilterSelect")?.value || "";
+
+      const visibleRows = rows.filter(r => {
+        if (!selectedZone) return true;
+        return getZoneCount(r.numbers) === parseInt(selectedZone, 10);
+      });
+
+      document.getElementById("tableNote").textContent = selectedZone
+        ? `顯示 ${selectedZone}個區記錄，共 ${visibleRows.length} 期`
+        : `顯示全部 ${rows.length} 期`;
 
       document.getElementById("resultsTableBody").innerHTML = visibleRows.map((r, index) => {
         const previous = visibleRows[index + 1] || null;
@@ -970,6 +1084,56 @@
       }).join("");
     }
 
+    function renderZoneComboStats(rows, size, targetId) {
+      const combos = buildZoneCombos(size);
+      const statsMap = {};
+
+      combos.forEach(combo => {
+        statsMap[combo] = {
+          combo,
+          count: 0,
+          gap: "-"
+        };
+      });
+
+      rows.forEach((row, index) => {
+        const comboKey = getZoneComboKey(row.numbers, size);
+        if (!comboKey || !statsMap[comboKey]) return;
+
+        statsMap[comboKey].count += 1;
+
+        if (statsMap[comboKey].gap === "-") {
+          statsMap[comboKey].gap = `${index}期`;
+        }
+      });
+
+      let html = `
+        <table class="combo-table">
+          <thead>
+            <tr>
+              <th>${size}區組合</th>
+              <th>Total</th>
+              <th>目前間隔</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      combos.forEach(combo => {
+        const item = statsMap[combo];
+        html += `
+          <tr>
+            <td><span class="combo-pill">${item.combo}</span></td>
+            <td><strong>${item.count}</strong></td>
+            <td>${item.gap}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById(targetId).innerHTML = html;
+    }
+
     function renderDashboard(rows) {
       const chartRows = getFilteredRowsByLimit(rows);
 
@@ -980,6 +1144,8 @@
       renderHotCold(mainFreq);
       renderMissingLong(chartRows);
       renderAdvancedAnalysis(chartRows);
+      renderZoneComboStats(chartRows, 3, "zoneCombo3Table");
+      renderZoneComboStats(chartRows, 4, "zoneCombo4Table");
       renderTable(rows);
 
       mainChartInstance = renderChart(
@@ -1034,6 +1200,9 @@
 
     document.getElementById("reloadBtn").addEventListener("click", loadData);
     document.getElementById("drawLimitInput").addEventListener("input", () => {
+      if (allRows.length) renderDashboard(allRows);
+    });
+    document.getElementById("zoneFilterSelect").addEventListener("change", () => {
       if (allRows.length) renderDashboard(allRows);
     });
     document.getElementById("compareBtn").addEventListener("click", () => {

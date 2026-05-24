@@ -95,6 +95,76 @@
       color: var(--text);
     }
 
+    .lucky-wrap {
+      margin-bottom: 20px;
+    }
+
+    .lucky-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .lucky-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .lucky-title {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--blue);
+      text-align: center;
+    }
+
+    .lucky-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .lucky-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .lucky-ball {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      background: rgba(31, 124, 255, 0.12);
+      color: var(--blue);
+      border: 1px solid rgba(31, 124, 255, 0.2);
+    }
+
+    .lucky-ball.special {
+      background: rgba(245, 158, 11, 0.14);
+      color: #b66a00;
+      border-color: rgba(245, 158, 11, 0.24);
+    }
+
+    .lucky-divider {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
     .metrics {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -467,6 +537,7 @@
       .layout-2, .layout-3 { grid-template-columns: 1fr; }
       .zone-combo-wrap { max-width: 100%; }
       .zone-combo-grid { grid-template-columns: 1fr; }
+      .lucky-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
@@ -494,6 +565,12 @@
       .combo-pill {
         padding: 3px 6px;
         font-size: 11px;
+      }
+
+      .lucky-ball {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
       }
     }
   </style>
@@ -529,6 +606,21 @@
         <option value="4">4個區</option>
         <option value="5">5個區</option>
       </select>
+    </div>
+
+    <div class="lucky-wrap">
+      <div class="lucky-grid">
+        <div class="lucky-card">
+          <div class="lucky-title">隨機幸運數字 A</div>
+          <div class="lucky-note">主號碼按最近 10 期逐位 range 減去已開號碼抽出，特別號碼減去最近 3 期特別號碼</div>
+          <div class="lucky-row" id="luckySetA"></div>
+        </div>
+        <div class="lucky-card">
+          <div class="lucky-title">隨機幸運數字 B</div>
+          <div class="lucky-note">主號碼按最近 10 期逐位 range 減去已開號碼抽出，特別號碼減去最近 3 期特別號碼</div>
+          <div class="lucky-row" id="luckySetB"></div>
+        </div>
+      </div>
     </div>
 
     <div class="metrics">
@@ -693,6 +785,108 @@
       if (isNaN(limit) || limit <= 0) return rows;
 
       return rows.slice(0, limit);
+    }
+
+    function randomPick(arr) {
+      if (!arr.length) return null;
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function buildLuckySet(rows) {
+      const latest10 = rows.slice(0, 10);
+      const latest3Special = rows.slice(0, 3);
+
+      if (latest10.length < 1) {
+        return { numbers: [], special: null };
+      }
+
+      const chosen = [];
+
+      for (let pos = 0; pos < 5; pos++) {
+        const positionValues = latest10
+          .map(r => Array.isArray(r.numbers) ? r.numbers[pos] : null)
+          .filter(v => Number.isInteger(v));
+
+        if (!positionValues.length) {
+          continue;
+        }
+
+        const minVal = Math.min(...positionValues);
+        const maxVal = Math.max(...positionValues);
+        const openedSet = new Set(positionValues);
+
+        let candidates = [];
+        for (let n = minVal; n <= maxVal; n++) {
+          if (!openedSet.has(n) && !chosen.includes(n)) {
+            candidates.push(n);
+          }
+        }
+
+        if (!candidates.length) {
+          for (let n = minVal; n <= maxVal; n++) {
+            if (!chosen.includes(n)) {
+              candidates.push(n);
+            }
+          }
+        }
+
+        if (!candidates.length) {
+          for (let n = 1; n <= 49; n++) {
+            if (!chosen.includes(n)) {
+              candidates.push(n);
+            }
+          }
+        }
+
+        const picked = randomPick(candidates);
+        if (picked !== null) chosen.push(picked);
+      }
+
+      chosen.sort((a, b) => a - b);
+
+      const recentSpecials = new Set(
+        latest3Special
+          .map(r => r.special)
+          .filter(v => Number.isInteger(v))
+      );
+
+      let specialCandidates = [];
+      for (let s = 1; s <= 7; s++) {
+        if (!recentSpecials.has(s)) specialCandidates.push(s);
+      }
+
+      if (!specialCandidates.length) {
+        specialCandidates = [1, 2, 3, 4, 5, 6, 7];
+      }
+
+      const special = randomPick(specialCandidates);
+
+      return {
+        numbers: chosen,
+        special
+      };
+    }
+
+    function renderLuckySet(containerId, luckySet) {
+      const el = document.getElementById(containerId);
+
+      if (!luckySet || !luckySet.numbers || !luckySet.numbers.length) {
+        el.innerHTML = `<div class="empty-note">暫時未能產生幸運數字</div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        ${luckySet.numbers.map(n => `<span class="lucky-ball">${n}</span>`).join("")}
+        <span class="lucky-divider">+</span>
+        <span class="lucky-ball special">${luckySet.special ?? "-"}</span>
+      `;
+    }
+
+    function renderLuckyNumbers(rows) {
+      const setA = buildLuckySet(rows);
+      const setB = buildLuckySet(rows);
+      renderLuckySet("luckySetA", setA);
+      renderLuckySet("luckySetB", setB);
     }
 
     function parseUserNumbers(input) {
@@ -1174,6 +1368,7 @@
       const mainFreq = countMainFrequencies(chartRows);
       const specialFreq = countSpecialFrequencies(chartRows);
 
+      renderLuckyNumbers(rows);
       renderMetrics(chartRows, mainFreq, specialFreq, rows);
       renderHotCold(mainFreq);
       renderMissingLong(chartRows);
